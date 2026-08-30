@@ -29,11 +29,22 @@ def clean_data(df):
     df["review_length"] = df["content"].apply(len)
     df["has_reply"] = df["replyContent"].notnull().astype(int)
     df["engagement_score"] = df["thumbsUpCount"] + (df["has_reply"] * 5)
+    df["word_count"] = df["content"].apply(lambda t: len(t.split()))
+    df["exclamation_count"] = df["content"].apply(lambda t: t.count("!"))
+    df["caps_ratio"] = df["content"].apply(
+        lambda t: sum(1 for c in t if c.isupper()) / len(t) if len(t) > 0 else 0
+    )
     return df
 
 # Prepare features and labels
 def prepare_features(df):
-    X = df[["score", "thumbsUpCount", "review_length", "has_reply", "engagement_score"]]
+    # NOTE: "score" is intentionally excluded from X because it is used to
+    # derive the label y below. Including it would leak the answer directly
+    # into the feature set and produce artificially inflated accuracy.
+    X = df[[
+        "thumbsUpCount", "review_length", "has_reply", "engagement_score",
+        "word_count", "exclamation_count", "caps_ratio",
+    ]]
     y = (df["score"] >= 4).astype(int)  # 1 = positive, 0 = neutral/negative
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
